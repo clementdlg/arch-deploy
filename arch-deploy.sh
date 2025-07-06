@@ -60,12 +60,6 @@ AUTHOR
 EOF
 }
 
-# convert_to_array() {
-# 	local value="${1#*=}"
-#
-# 	readarray -t _CURRENT_ARRAY < <( printf "%s" "$value" | tr ":" "\n")
-# }
-
 is_in_array() {
 	query="$1"
 	shift
@@ -91,6 +85,7 @@ get_next_arg() {
 check_config_syntax() {
 	local current_line=""
 	local line_nr=0
+	local has_warning=0
 	seen_keys=()
 
 	while IFS= read -r current_line; do
@@ -104,7 +99,7 @@ check_config_syntax() {
 		fi
 
 		# check format
-		if ! [[ "$trimmed_line" =~ ^[a-z][a-z_\ ]+=.*$ ]]; then
+		if ! [[ "$trimmed_line" =~ ^[a-z][a-z_]+\ *=.*$ ]]; then
 			log e "Config l${line_nr}: Invalid key/value pair"
 			exit 1
 		fi
@@ -115,20 +110,64 @@ check_config_syntax() {
 		# check for duplicate
 		if is_in_array "$trimmed_key" "${seen_keys[@]}"; then
 			log w "Config l${line_nr}: Found duplicate key '$trimmed_key'"
+			has_warning=1
 		else
 			seen_keys+=("$trimmed_key")
 		fi
 
 		if [[ "$trimmed_value" == *"::"* || "$trimmed_value" == *":" ]]; then
 			log w "Config l${line_nr}: Extra separator in value"
+			has_warning=1
 		fi
 
-		# log d "Config l${line_nr}: passing | k=${trimmed_key} v=${trimmed_value}"
-
 	done < "$_CONFIG_FILE"
+
+	(( has_warning == 00 )) && log i "Config is valid"
+}
+
+dotfiles_handler() {
+	echo "hello world"
+}
+
+pacman_handler() {
+	echo "hello world"
+}
+
+aur_handler() {
+	echo "hello world"
+}
+
+flatpak_handler() {
+	echo "hello world"
+}
+
+pipx_handler() {
+	echo "hello world"
+}
+
+repos_handler() {
+	echo "hello world"
+}
+
+systemd_handler() {
+	echo "hello world"
+}
+
+fw_handler() {
+	echo "hello world"
+}
+
+user_handler() {
+	echo "hello world"
+}
+
+libvirt_handler() {
+	echo "hello world"
 }
 
 main() {
+	local current_line=""
+	local line_nr=0
 
 	# show help
 	if (( ${#_ARGS[@]} == 0 )) || is_in_array "--help" "${_ARGS[@]}" ; then
@@ -157,15 +196,56 @@ main() {
 		exit 0
 	fi
 
-	# while IFS= read -r current_line; do
-	# 	# ignore comments
-	#
-	# 	_CURRENT_ARRAY=()
-	# 	convert_to_array "$current_line"
-	#
-	# 	declare -p _CURRENT_ARRAY
-	#
-	# done < "$_CONFIG_FILE"
+	while IFS= read -r current_line; do
+		line_nr=$(( line_nr + 1 ))
+		local trimmed_line="$( echo "$current_line" | xargs)"
+		local current_array=()
+
+		# skip comments and blank lines
+		if [[ "$trimmed_line" =~ ^# || -z "$trimmed_line" ]]; then
+			continue;
+		fi
+
+		local trimmed_key="$(echo "$trimmed_line" | cut -d= -f1 | xargs)"
+		local trimmed_value="$(echo "$trimmed_line" | cut -d= -f2 | xargs)"
+
+		readarray -t current_array < <( printf "%s" "$trimmed_value" | tr ":" "\n")
+
+		case "$trimmed_key" in
+			dotfiles_*)
+				log d "dotfiles"
+				dotfiles_handler "${current_array[@]}";;
+			pacman_*)
+				log d "pacman"
+				pacman_handler "${current_array[@]}";;
+			aur_*)
+				log d "aur"
+				aur_handler "${current_array[@]}";;
+			flatpak_*)
+				log d "flatpak"
+				flatpak_handler "${current_array[@]}";;
+			pipx_*)
+				log d "pipx"
+				pipx_handler "${current_array[@]}";;
+			repos_*)
+				log d "repos"
+				repos_handler "${current_array[@]}";;
+			systemd_*)
+				log d "systemd"
+				systemd_handler "${current_array[@]}";;
+			fw_*)
+				log d "fw"
+				fw_handler "${current_array[@]}";;
+			user_*)
+				log d "user"
+				user_handler "${current_array[@]}";;
+			libvirt_*)
+				log d "libvirt"
+				libvirt_handler "${current_array[@]}";;
+		esac
+
+
+	done < "$_CONFIG_FILE"
 }
 
 main
